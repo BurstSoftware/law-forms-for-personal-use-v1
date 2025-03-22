@@ -1,5 +1,31 @@
 import streamlit as st
 import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+import io
+
+def generate_pdf(data):
+    # Create a buffer to hold the PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    story = []
+    
+    # Add title
+    story.append(Paragraph("Tesla Vehicle Damage Report", styles['Title']))
+    story.append(Spacer(1, 12))
+    
+    # Add form data
+    normal_style = styles['Normal']
+    for key, value in data.items():
+        if value:  # Only include non-empty fields
+            story.append(Paragraph(f"<b>{key}:</b> {value}", normal_style))
+            story.append(Spacer(1, 6))
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
 
 def main():
     # Page configuration
@@ -48,25 +74,43 @@ def main():
     
     # Submit button
     if st.button("Submit Damage Report"):
+        # Compile form data into a dictionary
+        form_data = {
+            "Date and Time of Incident": f"{incident_date} at {incident_time}",
+            "Location": location_where,
+            "Street/Intersection": street_intersection,
+            "Business/Specific Location": business_location,
+            "Damage Description": damage_description,
+            "Suspect Description": suspect_description,
+            "Witnesses": witnesses,
+            "Camera Footage": camera_footage,
+            "Owner": printed_name,
+            "Signature": signature,
+            "Vehicle Model": vehicle_model,
+            "VIN": vin,
+            "Email": email,
+            "Phone": phone,
+            "Address": address,
+            "Additional Notes": additional_notes
+        }
+        
         # Display success message and summary
         st.success("Damage report submitted successfully!")
         st.subheader("Damage Report Summary")
-        st.write(f"**Date and Time of Incident:** {incident_date} at {incident_time}")
-        st.write(f"**Location:** {location_where}")
-        st.write(f"**Street/Intersection:** {street_intersection}")
-        st.write(f"**Business/Specific Location:** {business_location}")
-        st.write("**Damage Description:**", damage_description)
-        st.write("**Suspect Description:**", suspect_description)
-        st.write("**Witnesses:**", witnesses)
-        st.write("**Camera Footage:**", camera_footage)
-        st.write(f"**Owner:** {printed_name}")
-        st.write(f"**Vehicle Model:** {vehicle_model}")
-        st.write(f"**VIN:** {vin}")
-        st.write(f"**Email:** {email}")
-        st.write(f"**Phone:** {phone}")
-        st.write(f"**Address:** {address}")
-        if additional_notes:
-            st.write("**Additional Notes:**", additional_notes)
+        for key, value in form_data.items():
+            if value:
+                st.write(f"**{key}:** {value}")
+        
+        # Generate PDF
+        pdf_buffer = generate_pdf(form_data)
+        
+        # Provide download button
+        st.download_button(
+            label="Download Report as PDF",
+            data=pdf_buffer,
+            file_name=f"Tesla_Damage_Report_{incident_date}.pdf",
+            mime="application/pdf"
+        )
 
 if __name__ == "__main__":
     main()
